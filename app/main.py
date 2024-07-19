@@ -8,41 +8,58 @@
    Youtube:  https://www.youtube.com/enriquecatala
    
 """
-from os import environ
-import json
-from typing import Optional
-from loguru import logger
-
 from fastapi import FastAPI
-
-app = FastAPI()
-
-
-@app.get("/one/hello")
-def read_root():
-    if "HELLOWORLD_ENV" in environ:
-        txt = environ.get('HELLOWORLD_ENV')
-    else:
-        txt = "HELLOWORLD_ENV not found!"
-    return {"HELLOWORLD_ENV: {}".format(txt): "from /one/hello"}
+from fastapi.openapi.utils import get_openapi
 
 
-@app.get("/get_api_key")
-def read_api_key():
-    api_key = ""    
-    
-    try:
-        with open('/app/secrets/appconfig.conf') as f:
-            js = json.load(f)
-            api_key = js["api_key"]
-            # Do something with the file
+from pydantic import BaseModel
 
-    except IOError:
-        logger.exception(e)
-        print("/app/secrets/appconfig.conf not accessible")
+app = FastAPI(
+    openapi_version="3.0.2",
+)
 
-    return {"API_KEY: {}".format(api_key)}
 
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: Optional[str] = None):
-    return {"item_id": item_id, "q": q}
+class Item(BaseModel):
+    name: str
+    description: str | None = None
+    price: float
+    tax: float | None = None
+
+    # model_config = {
+    #     "json_schema_extra": {
+    #         "examples": [
+    #             {
+    #                 "name": "Foo",
+    #                 "description": "A very nice Item",
+    #                 "price": 35.4,
+    #                 "tax": 3.2,
+    #             }
+    #         ]
+    #     }
+    # }
+
+
+@app.get("/items/{item_id}", response_model=Item)
+async def update_item(item_id: int):
+    return Item(name="pengli", price=10)
+
+
+# def custom_openapi():
+#     if app.openapi_schema:
+#         return app.openapi_schema
+#     openapi_schema = get_openapi(
+#         title="Custom title",
+#         openapi_version="3.0.3",
+#         version="0.0.1",
+#         summary="This is a very custom OpenAPI schema",
+#         description="Here's a longer description of the custom **OpenAPI** schema",
+#         routes=app.routes,
+#     )
+#     openapi_schema["info"]["x-logo"] = {
+#         "url": "https://fastapi.tiangolo.com/img/logo-margin/logo-teal.png"
+#     }
+#     app.openapi_schema = openapi_schema
+#     return app.openapi_schema
+
+
+# app.openapi = custom_openapi
